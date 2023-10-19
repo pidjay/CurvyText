@@ -158,7 +158,9 @@ extension CGPath {
 
         var applier = Applier()
 
-        self.apply(info: &applier, function: f)
+        withUnsafeMutablePointer(to: &applier) {
+            self.apply(info: $0, function: f)
+        }
 
         return applier.sections
     }
