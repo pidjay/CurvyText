@@ -12,6 +12,7 @@ protocol PathSection {
     var end: CGPoint { get }
     func getTangent(t: CGFloat) -> PathTangent
     func nextTangent(linearDistance: CGFloat, after: PathTangent) -> NextTangent
+    func getLength() -> CGFloat
 }
 
 extension PathSection {
@@ -73,7 +74,12 @@ struct TangentGenerator {
 
     // Locations must be in ascending order
     mutating func getTangent(at location: CGFloat) -> PathTangent? {
-        assert(location >= lastLocation)
+        assert(location < 0 || location >= lastLocation)
+
+        if location < 0 {
+            lastLocation = location
+            return nil
+        }
 
         while let section = sections.first  {
             let currentTangent = lastTangent ?? section.getTangent(t: 0)
@@ -156,6 +162,10 @@ extension CGPath {
 
         return applier.sections
     }
+
+    var length: CGFloat {
+        sections().reduce(into: .zero) { $0 += $1.getLength() }
+    }
 }
 
 struct PathLineSection: PathSection {
@@ -171,6 +181,10 @@ struct PathLineSection: PathSection {
         return PathTangent(t: t,
                            point: CGPoint(x: x, y: y),
                            angle: atan2(dy, dx))
+    }
+
+    func getLength() -> CGFloat {
+        start.distance(to: end)
     }
 }
 
@@ -189,6 +203,27 @@ struct PathQuadCurveSection: PathSection {
         return PathTangent(t: t,
                            point: CGPoint(x: x, y: y),
                            angle: atan2(dy, dx))
+    }
+
+    func getLength() -> CGFloat {
+        let steps = 1_000 // on greater samples, more presicion
+
+        var current = start
+        var previous = start
+        var length: CGFloat = 0.0
+
+        for i in 1...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+
+            let x = bezier(t, p0.x, p1.x, p2.x)
+            let y = bezier(t, p0.y, p1.y, p2.y)
+
+            current = CGPoint(x: x, y: y)
+            length += previous.distance(to: current)
+            previous = current
+        }
+
+        return length
     }
 
     // The quadratic Bezier function at t
@@ -221,6 +256,27 @@ struct PathCurveSection: PathSection {
         return PathTangent(t: t,
                            point: CGPoint(x: x, y: y),
                            angle: atan2(dy, dx))
+    }
+
+    func getLength() -> CGFloat {
+        let steps = 1_000 // on greater samples, more presicion
+
+        var current = start
+        var previous = start
+        var length: CGFloat = 0.0
+
+        for i in 1...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+            
+            let x = bezier(t, p0.x, p1.x, p2.x, p3.x)
+            let y = bezier(t, p0.y, p1.y, p2.y, p3.y)
+
+            current = CGPoint(x: x, y: y)
+            length += previous.distance(to: current)
+            previous = current
+        }
+
+        return length
     }
 
     // The cubic Bezier function at t

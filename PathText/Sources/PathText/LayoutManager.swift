@@ -8,6 +8,7 @@
 import Foundation
 import CoreGraphics
 import CoreText
+import UIKit
 
 struct PathTextLayoutManager {
     public var text: NSAttributedString = NSAttributedString() {
@@ -73,10 +74,44 @@ struct PathTextLayoutManager {
 
     private mutating func updateLayout() {
         ensureGlyphs()
+        
+        let runsLength = glyphRuns.last?.boxes.last?.bounds.maxX ?? 0
+        let pathLength = path.length
+        let extraSpace = pathLength - runsLength
+        let glyphsCount = glyphRuns.reduce(into: .zero) { $0 += $1.boxes.count }
+        let extraSpacePerGlyph = extraSpace / CGFloat(glyphsCount - 1)
+
         var tangents = TangentGenerator(path: path)
         glyphRuns = glyphRuns.map {
             var glyphRun = $0
-            glyphRun.updateTangets(with: &tangents)
+            let paragraphStyle = glyphRun.attributes[.paragraphStyle] as? NSParagraphStyle
+
+            func offset(at index: Int) -> CGFloat {
+                if let paragraphStyle {
+                    switch paragraphStyle.alignment {
+                    case .left:
+                        return 0
+                    case .right:
+                        return extraSpace
+                    case .center:
+                        return extraSpace / 2
+                    case .justified:
+                        return extraSpacePerGlyph * CGFloat(index)
+                    case .natural:
+                        if CTRunGetStatus(glyphRun.run).contains(.rightToLeft) {
+                            return extraSpace
+                        } else {
+                            return 0
+                        }
+                    @unknown default:
+                        return 0
+                    }
+                } else {
+                    return 0
+                }
+            }
+
+            glyphRun.updateTangets(with: &tangents, offset: offset(at:))
             return glyphRun
         }
 

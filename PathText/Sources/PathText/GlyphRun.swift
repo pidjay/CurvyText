@@ -149,7 +149,7 @@ struct GlyphRun {
         self.attributes = CTRunGetAttributes(run) as! [NSAttributedString.Key : Any]
     }
 
-    private(set) var tangents: [PathTangent] = [] {
+    private(set) var tangents: [PathTangent?] = [] {
         didSet {
             updateTypographicBounds()
         }
@@ -159,13 +159,13 @@ struct GlyphRun {
         attributes[.baselineOffset] as? CGFloat ?? 0
     }
 
-    mutating func updateTangets(with tangentGenerator: inout TangentGenerator) {
-        tangents = boxes.mapUntilNil { tangentGenerator.getTangent(at: $0.anchor) }
+    mutating func updateTangets(with tangentGenerator: inout TangentGenerator, offset: (Int) -> CGFloat = { _ in .zero }) {
+        tangents = boxes.enumerated().map { tangentGenerator.getTangent(at: $0.element.anchor + offset($0.offset)) }
     }
 
     private mutating func updateTypographicBounds() {
-        let transformed: [CGRect] = zip(boxes, tangents).map { (arg) in
-            let (location, tangent) = arg
+        let transformed: [CGRect] = zip(boxes, tangents).compactMap { (location, tangent) in
+            guard let tangent else { return nil }
 
             let tangentPoint = tangent.point
             let angle = tangent.angle
@@ -191,6 +191,8 @@ struct GlyphRun {
         context.apply(attributes: attributes)
 
         for (location, tangent) in zip(boxes, tangents) {
+            guard let tangent else { continue }
+
             context.saveGState()
             defer { context.restoreGState() }
 
