@@ -159,7 +159,7 @@ struct GlyphRun {
         attributes[.baselineOffset] as? CGFloat ?? 0
     }
 
-    mutating func updateTangets(with tangentGenerator: inout TangentGenerator, offset: (Int) -> CGFloat = { _ in .zero }) {
+    mutating func updateTangents(with tangentGenerator: inout TangentGenerator, offset: (Int) -> CGFloat = { _ in .zero }) {
         tangents = boxes.enumerated().map { tangentGenerator.getTangent(at: $0.element.anchor + offset($0.offset)) }
     }
 

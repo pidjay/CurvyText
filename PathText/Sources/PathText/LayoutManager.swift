@@ -111,7 +111,7 @@ struct PathTextLayoutManager {
                 }
             }
 
-            glyphRun.updateTangets(with: &tangents, offset: offset(at:))
+            glyphRun.updateTangents(with: &tangents, offset: offset(at:))
             return glyphRun
         }
 
