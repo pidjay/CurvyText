@@ -64,5 +64,10 @@ public class PathTextView: UIView {
         layoutManager.ensureLayout()
         return layoutManager.typographicBounds
     }
+
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        setNeedsDisplay()
+    }
 }
 #endif
